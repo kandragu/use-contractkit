@@ -35,6 +35,8 @@ function truncateAddress(address: string) {
   return `${address.slice(0, 8)}...${address.slice(36)}`;
 }
 
+const IMPACT_MARKET_CONTRACT = '0x73D20479390E1acdB243570b5B739655989412f5';
+
 const networks = [Alfajores, Baklava, Mainnet];
 
 export default function Home(): React.ReactElement {
@@ -95,7 +97,7 @@ export default function Home(): React.ReactElement {
         await celo
           .transfer(
             // impact market contract
-            '0x73D20479390E1acdB243570b5B739655989412f5',
+            IMPACT_MARKET_CONTRACT,
             Web3.utils.toWei('0.00000001', 'ether')
           )
           .sendAndWaitForReceipt({
@@ -144,6 +146,35 @@ export default function Home(): React.ReactElement {
         );
       });
       toast.success('sign_personal succeeded');
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+
+    setSending(false);
+  };
+
+  const testApproveERC20 = async () => {
+    setSending(true);
+    try {
+      await performActions(async (k) => {
+        if (!k.defaultAccount) {
+          throw new Error('No default account');
+        }
+        const contract = await k.contracts.getStableToken(StableToken.cUSD);
+        await contract
+          .approve(
+            IMPACT_MARKET_CONTRACT,
+            Web3.utils.toWei('0.00000001', 'ether')
+          )
+          .sendAndWaitForReceipt();
+        const allowance = await contract.allowance(
+          k.defaultAccount,
+          IMPACT_MARKET_CONTRACT
+        );
+        toast.success(
+          `approval succeeded ${Web3.utils.fromWei(allowance.toString())}`
+        );
+      });
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -340,6 +371,14 @@ export default function Home(): React.ReactElement {
                 className="w-full md:w-max"
               >
                 Test signPersonal
+              </PrimaryButton>
+
+              <PrimaryButton
+                disabled={sending}
+                onClick={testApproveERC20}
+                className="w-full md:w-max"
+              >
+                Test Token Approval
               </PrimaryButton>
             </div>
 
